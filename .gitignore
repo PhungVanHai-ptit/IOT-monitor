@@ -34,4 +34,6 @@ build/
 
 *.pdf
 *.md
+!README.md
 *.txt
+*.postman_collection.json
