@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lịch sử Thiết bị — IoT Monitor</title>
+    <meta name="description" content="Lịch sử điều khiển thiết bị IoT với tìm kiếm và phân trang" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="js/auth.js"></script>
+</head>
+
+<body>
+
+    <div id="toast-container"></div>
+    <div id="sidebar-overlay" class="overlay"></div>
+
+    <div class="app-layout">
+
+        <!-- HEADER COMPONENT (Rendered by js/app.js) -->
+        <header class="app-header" id="app-header"></header>
+
+        <div class="app-body">
+
+            <!-- SIDEBAR COMPONENT (Rendered by js/app.js) -->
+            <aside class="app-sidebar" id="app-sidebar"></aside>
+
+            <!-- MAIN CONTENT -->
+            <main class="main-content">
+                <h1 class="page-title">Lịch sử Thiết bị</h1>
+
+                <!-- FILTER BAR (1 Hàng duy nhất) -->
+                <div class="filter-bar">
+                    <!-- 1. Ô tìm kiếm theo thời gian -->
+                    <div class="input-group" style="flex: 2; min-width: 180px;">
+                        <span class="input-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                            </svg>
+                        </span>
+                        <input type="text" id="history-search" class="filter-input"
+                            placeholder="Tìm kiếm theo thời gian..." />
+                    </div>
+
+                    <!-- 2. Dropdown lọc theo Thiết bị -->
+                    <div class="input-group" style="flex: 1; min-width: 130px;">
+                        <span class="input-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="2" y="2" width="20" height="20" rx="2" ry="2" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                        </span>
+                        <select id="history-device-filter" class="filter-select">
+                            <option value="all">Tất cả thiết bị</option>
+                            <option value="Light 1">Light 1</option>
+                            <option value="Light 2">Light 2</option>
+                        </select>
+                    </div>
+
+                    <!-- 3. Dropdown lọc theo Action -->
+                    <div class="input-group" style="flex: 1; min-width: 120px;">
+                        <span class="input-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                            </svg>
+                        </span>
+                        <select id="history-action-filter" class="filter-select">
+                            <option value="all">Tất cả Lệnh</option>
+                            <option value="ON">Lệnh: BẬT</option>
+                            <option value="OFF">Lệnh: TẮT</option>
+                        </select>
+                    </div>
+
+                    <!-- 4. Dropdown lọc theo Status -->
+                    <div class="input-group" style="flex: 1; min-width: 130px;">
+                        <span class="input-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="22 11.08 20 9 11 18 7 14 9 12 11 14 19 6 22 9" />
+                            </svg>
+                        </span>
+                        <select id="history-status-filter" class="filter-select">
+                            <option value="all">Tất cả Trạng thái</option>
+                            <option value="ON">Phản hồi: BẬT</option>
+                            <option value="OFF">Phản hồi: TẮT</option>
+                            <option value="mismatch">Lỗi không khớp</option>
+                        </select>
+                    </div>
+
+                    <!-- 5. Dropdown Sắp xếp -->
+                    <div class="input-group" style="flex: 1; min-width: 145px;">
+                        <span class="input-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19" />
+                                <polyline points="19,12 12,19 5,12" />
+                            </svg>
+                        </span>
+                        <select id="history-sort" class="filter-select">
+                            <option value="time-desc">Thời gian: Mới nhất</option>
+                            <option value="time-asc">Thời gian: Cũ nhất</option>
+                            <option value="name-asc">Tên thiết bị: A → Z</option>
+                            <option value="name-desc">Tên thiết bị: Z → A</option>
+                            <option value="action-on">Lệnh: BẬT → TẮT</option>
+                            <option value="action-off">Lệnh: TẮT → BẬT</option>
+                            <option value="status-on">Trạng thái: BẬT → TẮT</option>
+                            <option value="status-off">Trạng thái: TẮT → BẬT</option>
+                        </select>
+                    </div>
+
+                    <!-- 6. Nút Tìm kiếm -->
+                    <button type="button" id="btn-history-search" class="filter-btn-search">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                        <span>Tìm kiếm</span>
+                    </button>
+                </div>
+
+                <!-- TABLE -->
+                <div class="table-card">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tên Thiết bị</th>
+                                    <th>Người gửi lệnh</th>
+                                    <th>Lệnh gửi</th>
+                                    <th>Phản hồi</th>
+                                    <th>Thời gian</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-table-body"></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-bar">
+                        <div style="display:flex; align-items:center; gap:8px">
+                            <span id="history-pagination-info" class="pagination-info">Đang hiển thị 0–0 trong 0</span>
+                            <select id="history-per-page" class="per-page-select">
+                                <option value="10">10 / trang</option>
+                                <option value="25">25 / trang</option>
+                                <option value="50">50 / trang</option>
+                            </select>
+                        </div>
+                        <div id="history-pagination-controls" class="pagination-controls"></div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="data/mock-data.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/device-history.js"></script>
+</body>
+
+</html>

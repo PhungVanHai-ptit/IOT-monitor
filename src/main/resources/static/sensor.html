@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dữ liệu Cảm biến — IoT Monitor</title>
+    <meta name="description" content="Xem lịch sử dữ liệu cảm biến IoT với tìm kiếm, lọc và phân trang" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="js/auth.js"></script>
+</head>
+
+<body>
+
+    <div id="toast-container"></div>
+    <div id="sidebar-overlay" class="overlay"></div>
+
+    <div class="app-layout">
+
+        <!-- HEADER COMPONENT (Rendered by js/app.js) -->
+        <header class="app-header" id="app-header"></header>
+
+        <div class="app-body">
+
+            <!-- SIDEBAR COMPONENT (Rendered by js/app.js) -->
+            <aside class="app-sidebar" id="app-sidebar"></aside>
+
+            <!-- MAIN CONTENT -->
+            <main class="main-content">
+                <h1 class="page-title">Dữ liệu Cảm biến</h1>
+
+                <!-- FILTER BAR -->
+                <div class="filter-bar">
+                    <!-- 1. Ô nhập tìm kiếm (Bên trái) -->
+                    <div class="input-group" style="flex: 2; min-width: 240px;">
+                        <span class="input-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8" />
+                                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                        </span>
+                        <input type="text" id="sensor-search-global" class="filter-input"
+                            placeholder="Tìm kiếm theo giá trị hoặc thời gian..." />
+                    </div>
+
+                    <!-- 2. Dropdown Chọn Tiêu chí Tìm kiếm -->
+                    <div class="input-group" style="flex: 0; min-width: 155px;">
+                        <span class="input-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                            </svg>
+                        </span>
+                        <select id="sensor-search-target" class="filter-select">
+                            <option value="all">Tất cả tiêu chí</option>
+                            <option value="time">Thời gian</option>
+                            <option value="temperature">Nhiệt độ</option>
+                            <option value="humidity">Độ ẩm</option>
+                            <option value="light">Ánh sáng</option>
+                        </select>
+                    </div>
+
+                    <!-- 4. Dropdown Sắp xếp -->
+                    <div class="input-group" style="flex: 0; min-width: 170px;">
+                        <span class="input-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19" />
+                                <polyline points="19,12 12,19 5,12" />
+                            </svg>
+                        </span>
+                        <select id="sensor-sort" class="filter-select">
+                            <option value="time-desc">Thời gian: Mới nhất</option>
+                            <option value="time-asc">Thời gian: Cũ nhất</option>
+                            <option value="value-desc">Giá trị: Cao → Thấp</option>
+                            <option value="value-asc">Giá trị: Thấp → Cao</option>
+                        </select>
+                    </div>
+
+                    <!-- 3. Nút Tìm kiếm -->
+                    <button type="button" id="btn-sensor-search" class="filter-btn-search">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                        <span>Tìm kiếm</span>
+                    </button>
+
+                </div>
+
+                <!-- TABLE -->
+                <div class="table-card">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Loại Cảm biến</th>
+                                    <th>Giá trị</th>
+                                    <th>Thời gian</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sensor-table-body"></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-bar">
+                        <div style="display:flex; align-items:center; gap:8px">
+                            <span id="sensor-pagination-info" class="pagination-info">Hiển thị 0–0 trong tổng 0 bản
+                                ghi</span>
+                            <select id="sensor-per-page" class="per-page-select">
+                                <option value="10">10 / trang</option>
+                                <option value="25">25 / trang</option>
+                                <option value="50">50 / trang</option>
+                            </select>
+                        </div>
+                        <div id="sensor-pagination-controls" class="pagination-controls"></div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="data/mock-data.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/sensor.js"></script>
+</body>
+
+</html>

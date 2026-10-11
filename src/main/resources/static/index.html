@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bảng điều khiển — IoT Monitor</title>
+    <meta name="description" content="Dashboard giám sát cảm biến và điều khiển thiết bị IoT theo thời gian thực" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="js/auth.js"></script>
+</head>
+<body>
+
+<div id="toast-container"></div>
+<div id="sidebar-overlay" class="overlay"></div>
+
+<div class="app-layout">
+
+    <!-- HEADER COMPONENT (Rendered by js/app.js) -->
+    <header class="app-header" id="app-header"></header>
+
+    <div class="app-body">
+
+        <!-- SIDEBAR COMPONENT (Rendered by js/app.js) -->
+        <aside class="app-sidebar" id="app-sidebar"></aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+            <h1 class="page-title">
+                Dashboard
+                <span class="page-subtitle">Giám sát cảm biến &amp; điều khiển thiết bị theo thời gian thực</span>
+            </h1>
+
+            <!-- Cảnh báo mất kết nối / không có dữ liệu mới -->
+            <div id="connection-warning" class="connection-warning-banner" style="display: none; margin-bottom: 20px;">
+                <div class="warning-banner-content">
+                    <svg class="warning-banner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    <span><strong>Cảnh báo:</strong> Đã lâu không nhận được dữ liệu mới từ các cảm biến IoT! Vui lòng kiểm tra lại thiết bị phần cứng.</span>
+                </div>
+            </div>
+
+            <!-- 3 SENSOR CARDS -->
+            <div class="sensor-cards-grid">
+
+                <!-- Light Card -->
+                <div class="sensor-card" data-type="light">
+                    <div class="card-header">
+                        <span class="card-label">Ánh sáng</span>
+                        <div class="card-icon-wrap">
+                            <!-- Sun icon -->
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="5"/>
+                                <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                                <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="card-value">
+                        <span class="card-number" id="card-light-value">523</span>
+                        <span class="card-unit">Lux</span>
+                    </div>
+                    <div class="card-realtime">
+                        <span class="status-dot amber pulse"></span>
+                        Thời gian thực
+                    </div>
+                    <div class="card-updated" id="card-light-updated">Cập nhật: --:--:--</div>
+                </div>
+
+                <!-- Temperature Card -->
+                <div class="sensor-card" data-type="temperature">
+                    <div class="card-header">
+                        <span class="card-label">Nhiệt độ</span>
+                        <div class="card-icon-wrap">
+                            <!-- Thermometer icon -->
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="card-value">
+                        <span class="card-number" id="card-temperature-value">28.5</span>
+                        <span class="card-unit">°C</span>
+                    </div>
+                    <div class="card-realtime">
+                        <span class="status-dot blue pulse"></span>
+                        Thời gian thực
+                    </div>
+                    <div class="card-updated" id="card-temperature-updated">Cập nhật: --:--:--</div>
+                </div>
+
+                <!-- Humidity Card -->
+                <div class="sensor-card" data-type="humidity">
+                    <div class="card-header">
+                        <span class="card-label">Độ ẩm</span>
+                        <div class="card-icon-wrap">
+                            <!-- Droplet icon -->
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="card-value">
+                        <span class="card-number" id="card-humidity-value">67</span>
+                        <span class="card-unit">%</span>
+                    </div>
+                    <div class="card-realtime">
+                        <span class="status-dot blue pulse" style="background:#0891b2"></span>
+                        Thời gian thực
+                    </div>
+                    <div class="card-updated" id="card-humidity-updated">Cập nhật: --:--:--</div>
+                </div>
+            </div>
+
+            <!-- BOTTOM: Chart + Device Control -->
+            <div class="dashboard-bottom">
+
+                <!-- SENSOR CHART -->
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <div>
+                            <div class="chart-card-title">Lịch sử dữ liệu cảm biến</div>
+                            <div class="chart-card-sub">20 điểm đo gần nhất · Cập nhật mỗi 3s</div>
+                        </div>
+                        <div class="chart-live">
+                            <span class="status-dot green pulse"></span>
+                            Trực tiếp
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="sensor-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- DEVICE CONTROL -->
+                <div class="device-control-card">
+                    <div class="device-control-header">
+                        <div class="device-control-title">Điều khiển thiết bị</div>
+                        <span class="device-control-count" id="device-active-count">0/2 đang bật</span>
+                    </div>
+                    <div class="device-list" id="device-list">
+                        <!-- Rendered by dashboard.js -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script src="data/mock-data.js"></script>
+<script src="js/app.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>

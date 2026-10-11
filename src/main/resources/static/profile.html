@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hồ sơ Cá nhân — IoT Monitor</title>
+    <meta name="description" content="Thông tin sinh viên và các liên kết dự án IoT BTL" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="js/auth.js"></script>
+</head>
+<body>
+
+<div id="toast-container"></div>
+<div id="sidebar-overlay" class="overlay"></div>
+
+<div class="app-layout">
+
+    <!-- HEADER COMPONENT (Rendered by js/app.js) -->
+    <header class="app-header" id="app-header"></header>
+
+    <div class="app-body">
+
+        <!-- SIDEBAR COMPONENT (Rendered by js/app.js) -->
+        <aside class="app-sidebar" id="app-sidebar"></aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+            <h1 class="page-title">Hồ sơ Cá nhân</h1>
+
+            <div class="profile-section">
+                <!-- Profile Header Card -->
+                <div class="profile-card">
+                    <div class="profile-header">
+                        <div class="profile-avatar" id="profile-avatar">H</div>
+                        <div>
+                            <div class="profile-name" id="profile-name">Phùng Văn Hải</div>
+                            <div class="profile-role" id="profile-role">IoT Developer</div>
+                            <div class="profile-bio" id="profile-bio">Sinh viên năm 4, chuyên ngành Công nghệ thông tin</div>
+                            <div style="display:flex; align-items:center; gap:7px; margin-top:10px">
+                                <span class="status-dot green pulse"></span>
+                                <span style="font-size:12px; color:var(--success); font-weight:500">Đang hoạt động</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Personal Information -->
+                <p class="section-heading">Thông tin Cá nhân</p>
+                <div class="profile-info-grid" style="margin-bottom:20px">
+                    <div class="info-field">
+                        <div class="info-label">Họ và Tên</div>
+                        <div class="info-value" id="info-fullname">—</div>
+                    </div>
+                    <div class="info-field">
+                        <div class="info-label">Email</div>
+                        <div class="info-value" id="info-email">—</div>
+                    </div>
+                    <div class="info-field">
+                        <div class="info-label">Vai trò</div>
+                        <div class="info-value" id="info-role">—</div>
+                    </div>
+                    <div class="info-field">
+                        <div class="info-label">Mã Sinh viên</div>
+                        <div class="info-value" id="info-studentid">—</div>
+                    </div>
+                    <div class="info-field" style="grid-column: 1 / -1">
+                        <div class="info-label">Trường / Học viện</div>
+                        <div class="info-value" id="info-university">—</div>
+                    </div>
+                </div>
+
+                <!-- Project Links -->
+                <p class="section-heading">Liên kết Dự án</p>
+                <div class="links-grid" id="links-grid"></div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script src="data/mock-data.js"></script>
+<script src="js/app.js"></script>
+<script src="js/profile.js"></script>
+</body>
+</html>

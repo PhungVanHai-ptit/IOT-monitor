@@ -1,0 +1,430 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-4a5b-8c9d-0123456789ab",
+    "name": "IoT Monitor & Control API",
+    "description": "# He Thong Giam Sat va Dieu Khien IoT (PTIT)\n\nTai lieu API he thong giam sat moi truong va dieu khien thiet bi IoT qua vi dieu khien ESP32, MQTT Broker (Eclipse Mosquitto) va Spring Boot Backend.\n\n---\n\n## Thong Tin He Thong\n- Base URL: `{{baseUrl}}` (Mac dinh: `http://localhost:8080`)\n- Protocol: HTTP RESTful API & MQTT v3.1.1\n- Co so du lieu: MySQL (esp32_control)\n\n## Danh Muc Nhom API\n1. 1. Authentication (Dang nhap & Dang ky tai khoan)\n2. 2. Devices & Control (Danh sach thiet bi, Dieu khien Bat/Tat qua MQTT/ESP32, Lich su thao tac)\n3. 3. Sensor Data (Du lieu cam bien moi nhat: Nhiet do, Do am, Anh sang va Lich su phan trang)\n4. 4. MQTT Status (Kiem tra ket noi MQTT Broker va mach ESP32)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string",
+      "description": "Dia chi may chu Backend Spring Boot"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication",
+      "description": "Quan ly xac thuc tai khoan nguoi dung (Dang nhap, Dang ky).",
+      "item": [
+        {
+          "name": "Dang nhap (Login)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Xac thuc tai khoan nguoi dung.\n\n- Request Body: `username`, `password`\n- Tra ve: Thong tin nguoi dung (userId, fullname, email) neu dung thong tin dang nhap."
+          },
+          "response": [
+            {
+              "name": "200 OK - Dang nhap thanh cong",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"123\"\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"success\": true,\n  \"message\": \"Đăng nhập thành công!\",\n  \"user\": {\n    \"userId\": 1,\n    \"username\": \"admin\",\n    \"fullname\": \"Administrator\",\n    \"email\": \"admin@ptit.edu.vn\"\n  }\n}"
+            },
+            {
+              "name": "400 Bad Request - Sai thong tin",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"sai_mat_khau\"\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"success\": false,\n  \"message\": \"Sai tài khoản hoặc mật khẩu!\",\n  \"user\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Dang ky (Register)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullname\": \"Nguyen Van A\",\n  \"username\": \"user01\",\n  \"password\": \"123456\",\n  \"email\": \"user01@ptit.edu.vn\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "Dang ky tai khoan nguoi dung moi vao co so du lieu."
+          },
+          "response": [
+            {
+              "name": "200 OK - Dang ky thanh cong",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"fullname\": \"Nguyen Van A\",\n  \"username\": \"user01\",\n  \"password\": \"123456\",\n  \"email\": \"user01@ptit.edu.vn\"\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"success\": true,\n  \"message\": \"Đăng ký thành công!\",\n  \"user\": {\n    \"userId\": 2,\n    \"username\": \"user01\",\n    \"fullname\": \"Nguyen Van A\",\n    \"email\": \"user01@ptit.edu.vn\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Devices & Control",
+      "description": "Quan ly thiet bi va dieu khien phan cung ESP32 qua giao thuc MQTT.",
+      "item": [
+        {
+          "name": "Lay danh sach thiet bi",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/devices",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "devices"]
+            },
+            "description": "Lay toan bo danh sach thiet bi kem trang thai moi nhat (ON hoac OFF) tu CSDL."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": { "raw": "{{baseUrl}}/api/devices", "host": ["{{baseUrl}}"], "path": ["api", "devices"] }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "[\n  {\n    \"id\": 1,\n    \"name\": \"Light 1\",\n    \"pin\": \"19\",\n    \"icon\": \"light\",\n    \"status\": \"OFF\"\n  },\n  {\n    \"id\": 2,\n    \"name\": \"Light 2\",\n    \"pin\": \"21\",\n    \"icon\": \"light\",\n    \"status\": \"OFF\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Dieu khien thiet bi (Bat / Tat qua ESP32)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"ON\",\n  \"userId\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/devices/1/action",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "devices", "1", "action"]
+            },
+            "description": "Gui lenh dieu khien phan cung toi ESP32 qua MQTT topic device/{id}/action.\n\nBackend cho ESP32 phan hoi trang thai thuc te qua topic device/{id}/status trong toi da 3 giay:\n- 200 OK: ESP32 da cap nhat trang thai va phan hoi thanh cong.\n- 503 Service Unavailable: Broker MQTT chua bat hoac mat ket noi.\n- 504 Gateway Timeout: Mach ESP32 khong phan hoi sau 3 giay (tat nguon hoac mat song WiFi)."
+          },
+          "response": [
+            {
+              "name": "200 OK - Dieu khien thanh cong",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"ON\",\n  \"userId\": 1\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/api/devices/1/action", "host": ["{{baseUrl}}"], "path": ["api", "devices", "1", "action"] }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"id\": 101,\n  \"deviceName\": \"Light 1\",\n  \"sender\": \"Administrator\",\n  \"action\": \"ON\",\n  \"status\": \"ON\",\n  \"time\": \"2026-10-10 23:20:15\"\n}"
+            },
+            {
+              "name": "503 Service Unavailable - Chua ket noi MQTT Broker",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"ON\",\n  \"userId\": 1\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/api/devices/1/action", "host": ["{{baseUrl}}"], "path": ["api", "devices", "1", "action"] }
+              },
+              "status": "Service Unavailable",
+              "code": 503,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Chưa kết nối tới MQTT Broker! Vui lòng bật Mosquitto / MQTT Broker.\"\n}"
+            },
+            {
+              "name": "504 Gateway Timeout - Mach ESP32 khong phan hoi",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"ON\",\n  \"userId\": 1\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/api/devices/1/action", "host": ["{{baseUrl}}"], "path": ["api", "devices", "1", "action"] }
+              },
+              "status": "Gateway Timeout",
+              "code": 504,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Mạch ESP32 không phản hồi! Vui lòng kiểm tra nguồn và kết nối ESP32.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Lich su dieu khien thiet bi (Phan trang & Loc)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/devices/logs?page=1&size=10&search=&deviceFilter=all&actionFilter=all&statusFilter=all&sort=time-desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "devices", "logs"],
+              "query": [
+                { "key": "page", "value": "1", "description": "So trang (bat dau tu 1)" },
+                { "key": "size", "value": "10", "description": "So ban ghi tren 1 trang" },
+                { "key": "search", "value": "", "description": "Tim kiem theo ten thiet bi hoac nguoi thao tac" },
+                { "key": "deviceFilter", "value": "all", "description": "Loc theo thiet bi (all, 1, 2, ...)" },
+                { "key": "actionFilter", "value": "all", "description": "Loc theo hanh dong (all, ON, OFF, CHECK)" },
+                { "key": "statusFilter", "value": "all", "description": "Loc theo trang thai (all, ON, OFF)" },
+                { "key": "sort", "value": "time-desc", "description": "Sap xep thoi gian (time-desc hoac time-asc)" }
+              ]
+            },
+            "description": "Lay danh sach nhat ky dieu khien thiet bi kem phan trang va bo loc tim kiem."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/devices/logs?page=1&size=10&search=&deviceFilter=all&actionFilter=all&statusFilter=all&sort=time-desc",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "devices", "logs"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"data\": [\n    {\n      \"id\": 1,\n      \"deviceName\": \"Light 1\",\n      \"sender\": \"Administrator\",\n      \"action\": \"ON\",\n      \"status\": \"ON\",\n      \"time\": \"2026-10-10 23:20:15\"\n    }\n  ],\n  \"currentPage\": 1,\n  \"pageSize\": 10,\n  \"totalItems\": 1,\n  \"totalPages\": 1\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Sensor Data",
+      "description": "Du lieu do dac nhiet do, do am va cuong do anh sang do cac cam bien gui ve.",
+      "item": [
+        {
+          "name": "Du lieu cam bien moi nhat (Realtime Latest)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sensors/latest",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sensors", "latest"]
+            },
+            "description": "Lay chi so moi nhat cua ca 3 cam bien:\n- temperature: Nhiet do (do C)\n- humidity: Do am (%)\n- light: Anh sang (Lux)\n- lastUpdated: Thoi diem cap nhat gan nhat (HH:mm:ss)"
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": { "raw": "{{baseUrl}}/api/sensors/latest", "host": ["{{baseUrl}}"], "path": ["api", "sensors", "latest"] }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"light\": 420.5,\n  \"temperature\": 29.2,\n  \"humidity\": 68.4,\n  \"lastUpdated\": \"23:20:00\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Lich su du lieu cam bien (Phan trang & Loc)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sensors/data?page=1&size=10&target=all&search=&sort=time-desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sensors", "data"],
+              "query": [
+                { "key": "page", "value": "1", "description": "So trang (mac dinh 1)" },
+                { "key": "size", "value": "10", "description": "So ban ghi moi trang (mac dinh 10)" },
+                { "key": "target", "value": "all", "description": "Loc theo loai cam bien: all, temperature, humidity, light" },
+                { "key": "search", "value": "", "description": "Tim kiem theo gia tri hoac moc thoi gian" },
+                { "key": "sort", "value": "time-desc", "description": "Sap xep thoi gian: time-desc hoac time-asc" }
+              ]
+            },
+            "description": "Lay danh sach cac lan ghi nhan so do cam bien trong CSDL kem phan trang va tim kiem."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/sensors/data?page=1&size=10&target=all&search=&sort=time-desc",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sensors", "data"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"data\": [\n    {\n      \"id\": 10,\n      \"type\": \"Light\",\n      \"sensorName\": \"Cảm biến Ánh sáng\",\n      \"value\": 420.5,\n      \"unit\": \"Lux\",\n      \"time\": \"2026-10-10 23:20:00\"\n    },\n    {\n      \"id\": 9,\n      \"type\": \"Temperature\",\n      \"sensorName\": \"Cảm biến Nhiệt độ\",\n      \"value\": 29.2,\n      \"unit\": \"°C\",\n      \"time\": \"2026-10-10 23:20:00\"\n    },\n    {\n      \"id\": 8,\n      \"type\": \"Humidity\",\n      \"sensorName\": \"Cảm biến Độ ẩm\",\n      \"value\": 68.4,\n      \"unit\": \"%\",\n      \"time\": \"2026-10-10 23:20:00\"\n    }\n  ],\n  \"currentPage\": 1,\n  \"pageSize\": 10,\n  \"totalItems\": 3,\n  \"totalPages\": 1\n}"
+            }
+          ]
+        },
+        {
+          "name": "Lich su ve bieu do (Chart History)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sensors/chart?limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sensors", "chart"],
+              "query": [
+                { "key": "limit", "value": "20", "description": "So diem do gan nhat can lay de ve bieu do (mac dinh 20)" }
+              ]
+            },
+            "description": "Lay danh sach N diem do gan nhat tu CSDL da gom nhom theo moc thoi gian (time, temperature, humidity, light) de khoi tao bieu do tren Dashboard."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/sensors/chart?limit=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sensors", "chart"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "[\n  {\n    \"time\": \"23:19:50\",\n    \"temperature\": 28.5,\n    \"humidity\": 65.0,\n    \"light\": 350.0\n  },\n  {\n    \"time\": \"23:19:52\",\n    \"temperature\": 28.6,\n    \"humidity\": 65.1,\n    \"light\": 352.0\n  }\n]"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. MQTT Status",
+      "description": "Kiem tra tinh trang ket noi cua MQTT Broker va mach ESP32.",
+      "item": [
+        {
+          "name": "Kiem tra trang thai MQTT va ESP32",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mqtt/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mqtt", "status"]
+            },
+            "description": "Kiem tra tinh trang ket noi thoi gian thuc:\n- brokerConnected: true neu Backend ket noi toi MQTT Broker thanh cong.\n- hardwareOnline: true neu ESP32 gui ban tin MQTT trong vong 10 giay gan nhat.\n- lastHardwareMessageTime: Timestamp (milliseconds) thoi diem cuoi cung nhan du lieu tu ESP32."
+          },
+          "response": [
+            {
+              "name": "200 OK - He thong Online",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": { "raw": "{{baseUrl}}/api/mqtt/status", "host": ["{{baseUrl}}"], "path": ["api", "mqtt", "status"] }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"brokerConnected\": true,\n  \"hardwareOnline\": true,\n  \"lastHardwareMessageTime\": 1728577200000\n}"
+            },
+            {
+              "name": "200 OK - ESP32 Offline",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": { "raw": "{{baseUrl}}/api/mqtt/status", "host": ["{{baseUrl}}"], "path": ["api", "mqtt", "status"] }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"brokerConnected\": true,\n  \"hardwareOnline\": false,\n  \"lastHardwareMessageTime\": 0\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
