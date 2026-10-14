@@ -337,7 +337,7 @@ function startRealtimeSync() {
                 }
             }
         }
-    }, 2500);
+    }, 2000);
 }
 
 // Bắt đầu đồng bộ dữ liệu thời gian thực khi tải trang xong
@@ -387,6 +387,7 @@ const DEVICE_SVG_ICONS = {
 function createDeviceItem(device) {
     const isOn = device.status === "ON";
     const isSending = device.status === "SENDING";
+    const loadingAction = device.loadingAction; // 'ON' hoặc 'OFF'
 
     // Lấy SVG icon theo loại thiết bị
     const svgIcon = DEVICE_SVG_ICONS[device.icon] || DEVICE_SVG_ICONS.light;
@@ -399,29 +400,36 @@ function createDeviceItem(device) {
     let statusClass = "off";
     let statusText = "TẮT";
     if (isOn) { statusClass = "on"; statusText = "BẬT"; }
-    if (isSending) { statusClass = "sending"; statusText = "Đang gửi..."; }
+    if (isSending) { statusClass = "sending"; statusText = "Đang xử lý..."; }
+
+    const isOnLoading = isSending && loadingAction === "ON";
+    const isOffLoading = isSending && loadingAction === "OFF";
+
+    const onBtnContent = isOnLoading ? `<span class="btn-spinner"></span>Đang bật...` : "ON";
+    const offBtnContent = isOffLoading ? `<span class="btn-spinner"></span>Đang tắt...` : "OFF";
 
     div.innerHTML = `
         <div class="device-icon ${isOn ? 'on' : ''}">${svgIcon}</div>
         <div class="device-info">
             <div class="device-name">${device.name}</div>
             <span class="device-status-label ${statusClass}" id="status-label-${device.id}">
+                ${isSending ? '<span class="status-dot amber pulse"></span>' : ''}
                 ${statusText}
             </span>
         </div>
         <div class="device-buttons">
             <button
-                class="btn-on ${isOn ? 'active-state' : ''}"
+                class="btn-on ${isOn ? 'active-state' : ''} ${isOnLoading ? 'is-loading' : ''}"
                 id="btn-on-${device.id}"
                 onclick="sendDeviceCommand(${device.id}, 'ON')"
                 ${isSending || isOn ? "disabled" : ""}
-            >ON</button>
+            >${onBtnContent}</button>
             <button
-                class="btn-off ${!isOn && !isSending ? 'active-state' : ''}"
+                class="btn-off ${!isOn && !isSending ? 'active-state' : ''} ${isOffLoading ? 'is-loading' : ''}"
                 id="btn-off-${device.id}"
                 onclick="sendDeviceCommand(${device.id}, 'OFF')"
                 ${isSending || !isOn ? "disabled" : ""}
-            >OFF</button>
+            >${offBtnContent}</button>
         </div>
     `;
 
@@ -437,17 +445,21 @@ async function sendDeviceCommand(deviceId, action) {
     const device = dashboardDevices.find(function (d) { return d.id === deviceId; });
     if (!device) return;
 
-    // 2. Đặt trạng thái SENDING trong khi chờ phản hồi
+    // 2. Đặt trạng thái SENDING và ghi nhận nút đang loading
     const prevStatus = device.status;
     device.status = "SENDING";
+    device.loadingAction = action;
     renderDeviceControl();
     showToast("info", "Đang gửi lệnh " + action + " tới " + device.name + "...");
+
+    // Thêm delay nửa giây (500ms) tạo hiệu ứng phản hồi mượt mà
+    await new Promise(function (resolve) { setTimeout(resolve, 500); });
 
     // Lấy user hiện tại từ localStorage
     let currentUser = null;
     try {
         currentUser = JSON.parse(localStorage.getItem("iot_logged_in_user"));
-    } catch (e) {}
+    } catch (e) { }
 
     try {
         const response = await fetch(`/api/devices/${deviceId}/action`, {
@@ -461,11 +473,11 @@ async function sendDeviceCommand(deviceId, action) {
 
         if (response.ok) {
             const data = await response.json();
-            device.status = data.status || action;
+            device.status = (data.status === "OFF") ? "OFF" : (data.status === "ON" ? "ON" : action);
             showToast("success", device.name + " đã " + (device.status === "ON" ? "BẬT" : "TẮT") + " thành công!");
 
             // Thêm vào device history cục bộ
-            addToDeviceHistory(device, action, device.status);
+            addToDeviceHistory(device, action, "SUCCESS");
         } else {
             let errorMsg = "Lỗi khi điều khiển thiết bị (Mã lỗi " + response.status + ")";
             try {
@@ -473,7 +485,8 @@ async function sendDeviceCommand(deviceId, action) {
                 if (errData && errData.message) {
                     errorMsg = errData.message;
                 }
-            } catch (e) {}
+            } catch (e) { }
+            addToDeviceHistory(device, action, "FAILED");
             throw new Error(errorMsg);
         }
     } catch (err) {
@@ -482,10 +495,11 @@ async function sendDeviceCommand(deviceId, action) {
         device.status = prevStatus;
         // Báo lỗi rõ ràng cho người dùng, tuyệt đối không báo thành công giả
         showToast("error", err.message || "Không thể điều khiển thiết bị! Vui lòng kiểm tra MQTT và ESP32.");
+    } finally {
+        delete device.loadingAction;
+        // Cập nhật lại UI
+        renderDeviceControl();
     }
-
-    // Cập nhật lại UI
-    renderDeviceControl();
 }
 
 // Thêm bản ghi vào device history

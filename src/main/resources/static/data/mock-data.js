@@ -24,6 +24,7 @@ const devices = [
 // action: lệnh người dùng GỬI ĐI
 // status: trạng thái THỰC TẾ thiết bị PHẢN HỒI
 const deviceHistory = [
+    { id: 26, deviceName: "Light 1", sender: "Phùng Văn Hải", action: "ON", status: "PENDING", time: "2026-08-13 21:32:00" },
     { id: 1, deviceName: "Light 1", sender: "Phùng Văn Hải", action: "ON", status: "ON", time: "2026-08-13 21:30:21" },
     { id: 2, deviceName: "Light 2", sender: "Phùng Văn Hải", action: "OFF", status: "OFF", time: "2026-08-13 21:29:10" },
     { id: 3, deviceName: "Light 1", sender: "Admin", action: "ON", status: "OFF", time: "2026-08-13 21:27:45" },

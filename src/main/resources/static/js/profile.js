@@ -20,7 +20,7 @@ const projectLinks = {
     github: { label: "GitHub", url: "https://github.com/PhungVanHai-ptit/IOT-monitor", description: "Source code của project" },
     figma: { label: "Figma", url: "https://www.figma.com/design/23VemO5fYwxA4Awh6R2IkV/IOT-FE?node-id=0-1&p=f&t=c4kgjZvcBM4JFsqC-0", description: "Thiết kế UI/UX" },
     report: { label: "Report", url: "https://drive.google.com/file/d/1t1o5ncwTZ9yovvrZmA427Pv1FYjOlp_c/view?usp=sharing", description: "Báo cáo đồ án" },
-    postman: { label: "Postman", url: "https://www.postman.com", description: "API documentation" }
+    postman: { label: "Postman", url: "https://phamtungnui-6158287.postman.co/workspace/Tung-nui-Pham's-Workspace~21960704-a93b-4ba4-8dc4-732c4136e75c/collection/51703405-f852256b-3b09-41e8-90fd-d5149e6491ba?action=share&creator=51703405", description: "API documentation" }
 };
 
 

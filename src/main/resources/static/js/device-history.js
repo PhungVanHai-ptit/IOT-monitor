@@ -111,8 +111,39 @@ function initDeviceHistoryPage() {
         });
     }
 
+    // Tải danh sách thiết bị thật từ cơ sở dữ liệu vào dropdown lọc
+    loadDeviceFilterOptions();
+
     // Render bảng lần đầu
     renderHistoryTable();
+}
+
+// Tải danh sách thiết bị thực tế từ CSDL để hiển thị lên dropdown lọc
+async function loadDeviceFilterOptions() {
+    const deviceSelect = document.getElementById("history-device-filter");
+    if (!deviceSelect) return;
+
+    try {
+        const res = await fetch("/api/devices");
+        if (res.ok) {
+            const devicesList = await res.json();
+            if (Array.isArray(devicesList) && devicesList.length > 0) {
+                const currentVal = historyDeviceFilter || "all";
+                deviceSelect.innerHTML = `<option value="all">Tất cả thiết bị</option>`;
+                devicesList.forEach(function (dev) {
+                    const opt = document.createElement("option");
+                    opt.value = dev.name;
+                    opt.textContent = dev.name;
+                    deviceSelect.appendChild(opt);
+                });
+                if (currentVal && currentVal !== "all") {
+                    deviceSelect.value = currentVal;
+                }
+            }
+        }
+    } catch (err) {
+        console.warn("Could not load devices from backend for filter:", err);
+    }
 }
 
 // ============================================================
@@ -135,7 +166,8 @@ function getFilteredHistoryData() {
     if (historyDeviceFilter !== "all") {
         const queryDevice = historyDeviceFilter.toLowerCase();
         data = data.filter(function (row) {
-            return row.deviceName.toLowerCase().includes(queryDevice);
+            return (row.deviceName && row.deviceName.toLowerCase().includes(queryDevice)) ||
+                   (String(row.id) === historyDeviceFilter);
         });
     }
 
@@ -146,19 +178,22 @@ function getFilteredHistoryData() {
         });
     }
 
-    // 4. Lọc theo Trạng thái (Status phản hồi)
+    // 4. Lọc theo Trạng thái (Status phản hồi: SUCCESS / FAILED / PENDING)
     if (historyStatusFilter !== "all") {
-        if (historyStatusFilter === "mismatch") {
-            // Lỗi không khớp: Action != Status
-            data = data.filter(function (row) {
-                return row.action !== row.status;
-            });
-        } else {
-            // Lọc theo ON / OFF
-            data = data.filter(function (row) {
-                return row.status === historyStatusFilter;
-            });
-        }
+        const filterUpper = historyStatusFilter.toUpperCase();
+        data = data.filter(function (row) {
+            const rowStatus = (row.status || "").toUpperCase();
+            const rowAction = (row.action || "").toUpperCase();
+
+            if (filterUpper === "PENDING") {
+                return rowStatus === "PENDING";
+            } else if (filterUpper === "SUCCESS") {
+                return rowStatus === "SUCCESS" || (rowStatus === rowAction && rowStatus !== "PENDING");
+            } else if (filterUpper === "FAILED") {
+                return rowStatus === "FAILED" || (rowStatus !== rowAction && rowStatus !== "PENDING");
+            }
+            return rowStatus === filterUpper;
+        });
     }
 
     // 5. Sắp xếp
@@ -171,31 +206,26 @@ function sortHistoryData(data, sortKey) {
     return data.sort(function (a, b) {
         switch (sortKey) {
             case "time-desc":
-                // Mới nhất lên trên
-                return b.time.localeCompare(a.time);
+                return b.time.localeCompare(a.time) || (b.id - a.id);
             case "time-asc":
-                // Cũ nhất lên trên
-                return a.time.localeCompare(b.time);
+                return a.time.localeCompare(b.time) || (a.id - b.id);
             case "name-asc":
-                // Tên A → Z
-                return a.deviceName.localeCompare(b.deviceName);
+                return a.deviceName.localeCompare(b.deviceName) || (b.id - a.id);
             case "name-desc":
-                // Tên Z → A
-                return b.deviceName.localeCompare(a.deviceName);
+                return b.deviceName.localeCompare(a.deviceName) || (b.id - a.id);
             case "action-on":
-                // Action BẬT (ON) lên trên, TẮT (OFF) xuống dưới
-                return (b.action === "ON" ? 1 : 0) - (a.action === "ON" ? 1 : 0);
+                return ((b.action === "ON" ? 1 : 0) - (a.action === "ON" ? 1 : 0)) || (b.id - a.id);
             case "action-off":
-                // Action TẮT (OFF) lên trên, BẬT (ON) xuống dưới
-                return (a.action === "ON" ? 1 : 0) - (b.action === "ON" ? 1 : 0);
+                return ((a.action === "ON" ? 1 : 0) - (b.action === "ON" ? 1 : 0)) || (b.id - a.id);
+            case "status-success":
             case "status-on":
-                // Status BẬT (ON) lên trên
-                return (b.status === "ON" ? 1 : 0) - (a.status === "ON" ? 1 : 0);
+                return ((b.status === "SUCCESS" || b.status === b.action ? 1 : 0) - (a.status === "SUCCESS" || a.status === a.action ? 1 : 0)) || (b.id - a.id);
+            case "status-failed":
             case "status-off":
-                // Status TẮT (OFF) lên trên
-                return (a.status === "ON" ? 1 : 0) - (b.status === "ON" ? 1 : 0);
+                return ((b.status === "FAILED" || (b.status !== b.action && b.status !== "PENDING") ? 1 : 0) -
+                       (a.status === "FAILED" || (a.status !== a.action && a.status !== "PENDING") ? 1 : 0)) || (b.id - a.id);
             default:
-                return 0;
+                return (b.id - a.id);
         }
     });
 }
@@ -276,17 +306,23 @@ function getActionBadge(action) {
     return `<span class="badge ${cls}">${action}</span>`;
 }
 
-// Badge cho Status (thiết bị phản hồi)
-// Nếu Action = ON nhưng Status = OFF → mismatch → dùng màu đỏ cảnh báo
+// Badge cho Status (thiết bị phản hồi: SUCCESS, FAILED, PENDING)
 function getStatusBadge(action, status) {
-    const isMismatch = action !== status;
-    let cls;
-    if (isMismatch) {
-        cls = "badge-mismatch"; // màu đỏ cảnh báo
-    } else {
-        cls = status === "ON" ? "badge-on" : "badge-off";
+    const s = (status || "").toUpperCase();
+    const a = (action || "").toUpperCase();
+
+    // 1. Trạng thái PENDING (đang chờ)
+    if (s === "PENDING") {
+        return `<span class="badge badge-pending"><span class="status-dot amber pulse"></span>PENDING</span>`;
     }
-    return `<span class="badge ${cls}">${status}</span>`;
+
+    // 2. Trạng thái SUCCESS: BE trả về "SUCCESS", hoặc BE trả về "ON"/"OFF" khớp với action
+    if (s === "SUCCESS" || (s === a && s !== "PENDING")) {
+        return `<span class="badge badge-success"><span class="status-dot green"></span>SUCCESS</span>`;
+    }
+
+    // 3. Trạng thái FAILED: BE trả về "FAILED", hoặc BE trả về trạng thái không khớp action
+    return `<span class="badge badge-failed"><span class="status-dot red"></span>FAILED</span>`;
 }
 
 // ============================================================

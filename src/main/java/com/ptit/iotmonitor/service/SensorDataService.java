@@ -156,25 +156,14 @@ public class SensorDataService {
         Specification<SensorData> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // 1. Target filter: temperature, humidity, light
-            // Chỉ lọc theo loại cảm biến khi target là loại cụ thể (không lọc khi target là 'all' hoặc 'time')
-            if (target != null && !target.isBlank() && !"all".equalsIgnoreCase(target) && !"time".equalsIgnoreCase(target)) {
-                String targetType = mapTargetToSensorType(target);
-                if (targetType != null) {
-                    predicates.add(cb.or(
-                            cb.equal(cb.lower(root.get("sensor").get("type")), targetType.toLowerCase()),
-                            cb.equal(cb.lower(root.get("sensor").get("type")), target.toLowerCase())
-                    ));
-                }
-            }
-
-            // 2. Search keyword filter
+            // Search keyword filter
+            // Dropdown target chỉ đóng vai trò xác định tiêu chí tìm kiếm (tìm giá trị gì), không tự ý lọc khi search rỗng
             if (search != null && !search.trim().isEmpty()) {
                 String keyword = search.trim();
                 String valueKeyword = keyword.replace(",", ".");
                 List<Predicate> searchPredicates = new ArrayList<>();
 
-                // 2.1. Nếu chọn tiêu chí 'time' -> CHỈ tìm kiếm theo chuỗi thời gian
+                // 1. Tiêu chí 'time' -> CHỈ tìm kiếm theo chuỗi thời gian
                 if ("time".equalsIgnoreCase(target)) {
                     try {
                         searchPredicates.add(cb.like(
@@ -185,17 +174,31 @@ public class SensorDataService {
                         log.warn("Cannot apply DATE_FORMAT function on timestamp: {}", e.getMessage());
                     }
                 }
-                // 2.2. Nếu chọn loại cảm biến cụ thể ('temperature', 'humidity', 'light') -> CHỈ tìm kiếm theo giá trị đo số
+                // 2. Tiêu chí loại cảm biến cụ thể ('temperature', 'humidity', 'light') -> CHỈ tìm kiếm giá trị trong loại cảm biến đó
                 else if ("temperature".equalsIgnoreCase(target) || "humidity".equalsIgnoreCase(target) || "light".equalsIgnoreCase(target)) {
+                    String targetType = mapTargetToSensorType(target);
+                    Predicate typePredicate = null;
+                    if (targetType != null) {
+                        typePredicate = cb.or(
+                                cb.equal(cb.lower(root.get("sensor").get("type")), targetType.toLowerCase()),
+                                cb.equal(cb.lower(root.get("sensor").get("type")), target.toLowerCase())
+                        );
+                    }
+
                     try {
                         float floatVal = Float.parseFloat(valueKeyword);
-                        searchPredicates.add(cb.equal(root.get("value"), floatVal));
+                        Predicate valuePredicate = cb.equal(root.get("value"), floatVal);
+                        if (typePredicate != null) {
+                            searchPredicates.add(cb.and(typePredicate, valuePredicate));
+                        } else {
+                            searchPredicates.add(valuePredicate);
+                        }
                     } catch (NumberFormatException ignored) {
                         // Nhập chuỗi ngày hoặc chữ không phải số -> trả về rỗng
                         searchPredicates.add(cb.disjunction());
                     }
                 }
-                // 2.3. Nếu chọn 'all' (Tất cả tiêu chí) -> tìm đa năng: theo giá trị, tên cảm biến hoặc thời gian
+                // 3. Tiêu chí 'all' (Tất cả tiêu chí) -> tìm đa năng: theo giá trị, tên cảm biến hoặc thời gian
                 else {
                     try {
                         float floatVal = Float.parseFloat(valueKeyword);
@@ -280,12 +283,12 @@ public class SensorDataService {
     }
 
     private Sort parseSort(String sortStr) {
-        if (sortStr == null) return Sort.by(Sort.Direction.DESC, "timestamp");
+        if (sortStr == null) return Sort.by(Sort.Direction.DESC, "timestamp").and(Sort.by(Sort.Direction.DESC, "id"));
         return switch (sortStr) {
-            case "time-asc" -> Sort.by(Sort.Direction.ASC, "timestamp");
-            case "value-desc" -> Sort.by(Sort.Direction.DESC, "value");
-            case "value-asc" -> Sort.by(Sort.Direction.ASC, "value");
-            default -> Sort.by(Sort.Direction.DESC, "timestamp");
+            case "time-asc" -> Sort.by(Sort.Direction.ASC, "timestamp").and(Sort.by(Sort.Direction.ASC, "id"));
+            case "value-desc" -> Sort.by(Sort.Direction.DESC, "value").and(Sort.by(Sort.Direction.DESC, "id"));
+            case "value-asc" -> Sort.by(Sort.Direction.ASC, "value").and(Sort.by(Sort.Direction.DESC, "id"));
+            default -> Sort.by(Sort.Direction.DESC, "timestamp").and(Sort.by(Sort.Direction.DESC, "id"));
         };
     }
 

@@ -47,7 +47,7 @@ public class MqttService implements MqttCallbackExtended {
     }
 
     public boolean isHardwareOnline() {
-        return lastHardwareMessageTime > 0 && (System.currentTimeMillis() - lastHardwareMessageTime) < 15000;
+        return lastHardwareMessageTime > 0 && (System.currentTimeMillis() - lastHardwareMessageTime) < 10000;
     }
 
     public long getLastHardwareMessageTime() {

@@ -60,8 +60,6 @@
                         </span>
                         <select id="history-device-filter" class="filter-select">
                             <option value="all">Tất cả thiết bị</option>
-                            <option value="Light 1">Light 1</option>
-                            <option value="Light 2">Light 2</option>
                         </select>
                     </div>
 
@@ -81,7 +79,7 @@
                     </div>
 
                     <!-- 4. Dropdown lọc theo Status -->
-                    <div class="input-group" style="flex: 1; min-width: 130px;">
+                    <div class="input-group" style="flex: 1; min-width: 140px;">
                         <span class="input-icon">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                 stroke-linecap="round" stroke-linejoin="round">
@@ -89,10 +87,10 @@
                             </svg>
                         </span>
                         <select id="history-status-filter" class="filter-select">
-                            <option value="all">Tất cả Trạng thái</option>
-                            <option value="ON">Phản hồi: BẬT</option>
-                            <option value="OFF">Phản hồi: TẮT</option>
-                            <option value="mismatch">Lỗi không khớp</option>
+                            <option value="all">Tất cả Phản hồi</option>
+                            <option value="SUCCESS">Thành công (SUCCESS)</option>
+                            <option value="FAILED">Thất bại (FAILED)</option>
+                            <option value="PENDING">Đang chờ (PENDING)</option>
                         </select>
                     </div>
 
@@ -112,8 +110,8 @@
                             <option value="name-desc">Tên thiết bị: Z → A</option>
                             <option value="action-on">Lệnh: BẬT → TẮT</option>
                             <option value="action-off">Lệnh: TẮT → BẬT</option>
-                            <option value="status-on">Trạng thái: BẬT → TẮT</option>
-                            <option value="status-off">Trạng thái: TẮT → BẬT</option>
+                            <option value="status-on">Phản hồi: SUCCESS → FAILED</option>
+                            <option value="status-off">Phản hồi: FAILED → SUCCESS</option>
                         </select>
                     </div>
 

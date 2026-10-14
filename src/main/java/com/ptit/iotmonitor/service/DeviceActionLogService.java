@@ -61,6 +61,15 @@ public class DeviceActionLogService {
         return saved;
     }
 
+    public void updateLogStatus(Long logId, String newStatus) {
+        if (logId == null) return;
+        deviceActionLogRepository.findById(logId).ifPresent(logEntry -> {
+            logEntry.setStatus(newStatus);
+            deviceActionLogRepository.save(logEntry);
+            log.info("Updated device action log id={} to status={}", logId, newStatus);
+        });
+    }
+
     public PageResponse<DeviceActionLogDTO> getHistoryPage(
             int page,
             int size,
@@ -77,9 +86,17 @@ public class DeviceActionLogService {
         Specification<DeviceActionLog> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // 1. Device filter
+            // 1. Device filter (lọc theo Tên thiết bị hoặc ID thiết bị trong DB)
             if (deviceFilter != null && !deviceFilter.isBlank() && !"all".equalsIgnoreCase(deviceFilter)) {
-                predicates.add(cb.equal(cb.lower(root.get("device").get("name")), deviceFilter.toLowerCase()));
+                String devFilterTrim = deviceFilter.trim();
+                List<Predicate> devPredicates = new ArrayList<>();
+                devPredicates.add(cb.equal(cb.lower(root.get("device").get("name")), devFilterTrim.toLowerCase()));
+                try {
+                    Integer devId = Integer.parseInt(devFilterTrim);
+                    devPredicates.add(cb.equal(root.get("device").get("id"), devId));
+                } catch (NumberFormatException ignored) {
+                }
+                predicates.add(cb.or(devPredicates.toArray(new Predicate[0])));
             }
 
             // 2. Action filter (ON / OFF / CHECK)
@@ -87,12 +104,31 @@ public class DeviceActionLogService {
                 predicates.add(cb.equal(cb.upper(root.get("action")), actionFilter.toUpperCase()));
             }
 
-            // 3. Status filter (ON / OFF / mismatch)
+            // 3. Status filter (SUCCESS / FAILED / PENDING)
             if (statusFilter != null && !statusFilter.isBlank() && !"all".equalsIgnoreCase(statusFilter)) {
-                if ("mismatch".equalsIgnoreCase(statusFilter)) {
-                    predicates.add(cb.notEqual(root.get("action"), root.get("status")));
+                String filterUpper = statusFilter.toUpperCase();
+                if ("SUCCESS".equals(filterUpper)) {
+                    // Thành công: status = 'SUCCESS' HOẶC (status = action VÀ status != 'PENDING')
+                    predicates.add(cb.or(
+                            cb.equal(cb.upper(root.get("status")), "SUCCESS"),
+                            cb.and(
+                                    cb.equal(cb.upper(root.get("status")), cb.upper(root.get("action"))),
+                                    cb.notEqual(cb.upper(root.get("status")), "PENDING")
+                            )
+                    ));
+                } else if ("FAILED".equals(filterUpper)) {
+                    // Thất bại: status = 'FAILED' HOẶC (status != action VÀ status != 'PENDING')
+                    predicates.add(cb.or(
+                            cb.equal(cb.upper(root.get("status")), "FAILED"),
+                            cb.and(
+                                    cb.notEqual(cb.upper(root.get("status")), cb.upper(root.get("action"))),
+                                    cb.notEqual(cb.upper(root.get("status")), "PENDING")
+                            )
+                    ));
+                } else if ("PENDING".equals(filterUpper)) {
+                    predicates.add(cb.equal(cb.upper(root.get("status")), "PENDING"));
                 } else {
-                    predicates.add(cb.equal(cb.upper(root.get("status")), statusFilter.toUpperCase()));
+                    predicates.add(cb.equal(cb.upper(root.get("status")), filterUpper));
                 }
             }
 
@@ -141,16 +177,16 @@ public class DeviceActionLogService {
     }
 
     private Sort parseSort(String sortStr) {
-        if (sortStr == null) return Sort.by(Sort.Direction.DESC, "timestamp");
+        if (sortStr == null) return Sort.by(Sort.Direction.DESC, "timestamp").and(Sort.by(Sort.Direction.DESC, "id"));
         return switch (sortStr) {
-            case "time-asc" -> Sort.by(Sort.Direction.ASC, "timestamp");
-            case "name-asc" -> Sort.by(Sort.Direction.ASC, "device.name");
-            case "name-desc" -> Sort.by(Sort.Direction.DESC, "device.name");
-            case "action-on" -> Sort.by(Sort.Direction.DESC, "action");
-            case "action-off" -> Sort.by(Sort.Direction.ASC, "action");
-            case "status-on" -> Sort.by(Sort.Direction.DESC, "status");
-            case "status-off" -> Sort.by(Sort.Direction.ASC, "status");
-            default -> Sort.by(Sort.Direction.DESC, "timestamp");
+            case "time-asc" -> Sort.by(Sort.Direction.ASC, "timestamp").and(Sort.by(Sort.Direction.ASC, "id"));
+            case "name-asc" -> Sort.by(Sort.Direction.ASC, "device.name").and(Sort.by(Sort.Direction.DESC, "id"));
+            case "name-desc" -> Sort.by(Sort.Direction.DESC, "device.name").and(Sort.by(Sort.Direction.DESC, "id"));
+            case "action-on" -> Sort.by(Sort.Direction.DESC, "action").and(Sort.by(Sort.Direction.DESC, "id"));
+            case "action-off" -> Sort.by(Sort.Direction.ASC, "action").and(Sort.by(Sort.Direction.DESC, "id"));
+            case "status-success", "status-on" -> Sort.by(Sort.Direction.DESC, "status").and(Sort.by(Sort.Direction.DESC, "id"));
+            case "status-failed", "status-off" -> Sort.by(Sort.Direction.ASC, "status").and(Sort.by(Sort.Direction.DESC, "id"));
+            default -> Sort.by(Sort.Direction.DESC, "timestamp").and(Sort.by(Sort.Direction.DESC, "id"));
         };
     }
 }

@@ -76,8 +76,11 @@ function initSensorPage() {
                 }
             }
 
-            sensorCurrentPage = 1;
-            renderSensorTable();
+            // Chỉ tìm kiếm lại nếu ô search đang có từ khóa
+            if (sensorSearchGlobal !== "") {
+                sensorCurrentPage = 1;
+                renderSensorTable();
+            }
         });
     }
 
@@ -135,22 +138,7 @@ function initSensorPage() {
 function getFilteredSensorData() {
     let data = sensorData.slice(); // sao chép mảng
 
-    // 1. Lọc theo tiêu chí loại cảm biến nếu được chọn cụ thể
-    if (sensorSearchTarget === "temperature") {
-        data = data.filter(function (row) {
-            return row.type.toLowerCase() === "temperature";
-        });
-    } else if (sensorSearchTarget === "humidity") {
-        data = data.filter(function (row) {
-            return row.type.toLowerCase() === "humidity";
-        });
-    } else if (sensorSearchTarget === "light") {
-        data = data.filter(function (row) {
-            return row.type.toLowerCase() === "light";
-        });
-    }
-
-    // 2. Tìm kiếm theo từ khoá nhập
+    // Tìm kiếm theo từ khoá nhập (chỉ lọc khi có nhập từ khóa tìm kiếm)
     if (sensorSearchGlobal !== "") {
         const query = sensorSearchGlobal;
 
@@ -160,10 +148,10 @@ function getFilteredSensorData() {
                 return row.time.includes(query);
             });
         } else if (sensorSearchTarget === "temperature" || sensorSearchTarget === "humidity" || sensorSearchTarget === "light") {
-            // Lọc CHỈ theo giá trị số của loại cảm biến đã chọn (không tìm theo thời gian)
+            // Lọc CHỈ theo giá trị số của loại cảm biến đã chọn
             const valueQuery = query.replace(",", ".");
             data = data.filter(function (row) {
-                return String(row.value).includes(valueQuery);
+                return row.type.toLowerCase() === sensorSearchTarget && String(row.value).includes(valueQuery);
             });
         } else {
             // Tiêu chí 'all' (Tất cả): tìm theo thời gian hoặc giá trị

@@ -140,6 +140,7 @@ public class DataInitializer implements CommandLineRunner {
                     {"Light 2", "OFF", "ON"},
                     {"Light 1", "OFF", "OFF"},
                     {"Light 2", "ON", "OFF"},
+                    {"Light 1", "ON", "PENDING"},
                     {"Light 1", "ON", "ON"}
             };
 

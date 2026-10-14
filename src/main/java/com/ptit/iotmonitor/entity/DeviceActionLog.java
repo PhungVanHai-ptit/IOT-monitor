@@ -31,8 +31,8 @@ public class DeviceActionLog {
     @Column(nullable = false, length = 10)
     private String action; // 'ON', 'OFF', 'CHECK'
 
-    @Column(nullable = false, length = 10)
-    private String status; // 'ON', 'OFF'
+    @Column(nullable = false, length = 20)
+    private String status; // 'ON', 'OFF', 'PENDING'
 
     @Column(nullable = false)
     private LocalDateTime timestamp;

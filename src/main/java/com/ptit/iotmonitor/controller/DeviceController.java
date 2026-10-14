@@ -62,41 +62,50 @@ public class DeviceController {
 
         String action = request.getAction() != null ? request.getAction().toUpperCase() : "ON";
 
-        // 2. Gửi lệnh qua MQTT tới ESP32 và chờ phản hồi (timeout 3 giây)
+        // 2. Ghi nhận log ban đầu với trạng thái PENDING
+        DeviceActionLog logEntry = deviceActionLogService.recordAction(
+                deviceId,
+                request.getUserId(),
+                action,
+                "PENDING"
+        );
+
+        // 3. Gửi lệnh qua MQTT tới ESP32 và chờ phản hồi (timeout 3 giây)
         String responseStatus = mqttService.sendCommandAndWaitForResponse(deviceId, action, 3);
 
         if (responseStatus == null) {
             log.warn("Gửi lệnh thất bại: Mất kết nối MQTT Broker khi gửi tới device {}", deviceId);
+            String failStatus = "ON".equalsIgnoreCase(action) ? "OFF" : "ON";
+            deviceActionLogService.updateLogStatus(logEntry.getId(), failStatus);
             return ResponseEntity.status(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE)
                     .body(java.util.Map.of("message", "Không thể gửi lệnh qua MQTT Broker (mất kết nối)!"));
         }
 
         if ("TIMEOUT".equals(responseStatus)) {
             log.warn("ESP32 không phản hồi cho device {} sau 3 giây", deviceId);
+            String failStatus = "ON".equalsIgnoreCase(action) ? "OFF" : "ON";
+            deviceActionLogService.updateLogStatus(logEntry.getId(), failStatus);
             return ResponseEntity.status(org.springframework.http.HttpStatus.GATEWAY_TIMEOUT)
                     .body(java.util.Map.of("message", "Mạch ESP32 không phản hồi! Vui lòng kiểm tra nguồn và kết nối ESP32."));
         }
 
         if ("ERROR".equals(responseStatus)) {
             log.error("Lỗi khi chờ phản hồi từ thiết bị {}", deviceId);
+            String failStatus = "ON".equalsIgnoreCase(action) ? "OFF" : "ON";
+            deviceActionLogService.updateLogStatus(logEntry.getId(), failStatus);
             return ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(java.util.Map.of("message", "Lỗi nội bộ khi gửi lệnh tới thiết bị!"));
         }
 
-        // 3. Thiết bị đã phản hồi thành công trạng thái thực tế ("ON" hoặc "OFF")
-        DeviceActionLog logEntry = deviceActionLogService.recordAction(
-                deviceId,
-                request.getUserId(),
-                action,
-                responseStatus
-        );
+        // 4. Thiết bị đã phản hồi thành công trạng thái thực tế ("ON" hoặc "OFF")
+        deviceActionLogService.updateLogStatus(logEntry.getId(), responseStatus);
 
         DeviceActionLogDTO dto = DeviceActionLogDTO.builder()
                 .id(logEntry.getId())
                 .deviceName(logEntry.getDevice().getName())
                 .sender(logEntry.getUser() != null ? logEntry.getUser().getFullName() : "Admin")
                 .action(logEntry.getAction())
-                .status(logEntry.getStatus())
+                .status(responseStatus)
                 .time(logEntry.getTimestamp().format(FULL_FORMATTER))
                 .build();
 
