@@ -35,7 +35,7 @@ Dự án là giải pháp IoT toàn diện phục vụ việc thu thập, lưu t
 
 ---
 
-## 🛠️ 3. Yêu cầu môi trường (Prerequisites)
+## 3. Yêu cầu môi trường (Prerequisites)
 
 Trước khi cài đặt, máy tính cần cài sẵn các công cụ sau:
 - **Java Development Kit (JDK)**: Phiên bản 21 trở lên.
@@ -147,7 +147,6 @@ IOT-monitor/
 
 ---
 
-## 👤 Tác giả
+## Tác giả
 - **Sinh viên**: Phùng Văn Hải
-- **Mã sinh viên**: B23DCCN281
 - **Học viện Công nghệ Bưu chính Viễn thông (PTIT)**
