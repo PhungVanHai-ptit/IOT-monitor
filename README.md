@@ -1,10 +1,10 @@
-# 🌐 IoT Monitor System
+# IoT Monitor System
 
 Hệ thống giám sát môi trường và điều khiển thiết bị thông minh sử dụng vi điều khiển **ESP32**, giao thức **MQTT**, backend **Spring Boot** và giao diện **Web Dashboard**.
 
 ---
 
-## 📌 1. Giới thiệu tổng quan
+## 1. Giới thiệu tổng quan
 
 Dự án là giải pháp IoT toàn diện phục vụ việc thu thập, lưu trữ, hiển thị dữ liệu môi trường thời gian thực và điều khiển các thiết bị ngoại vi từ xa:
 - **Thu thập dữ liệu môi trường**: Đo nhiệt độ, độ ẩm (cảm biến DHT11) và cường độ ánh sáng (cảm biến LDR).
@@ -14,7 +14,7 @@ Dự án là giải pháp IoT toàn diện phục vụ việc thu thập, lưu t
 
 ---
 
-## 🏗️ 2. Kiến trúc hệ thống
+## 2. Kiến trúc hệ thống
 
 ```text
 [ Cảm biến & Thiết bị ] 
@@ -48,7 +48,7 @@ Trước khi cài đặt, máy tính cần cài sẵn các công cụ sau:
 
 ---
 
-## 🚀 4. Hướng dẫn cài đặt & Khởi chạy
+## 4. Hướng dẫn cài đặt & Khởi chạy
 
 ### Bước 1: Clone dự án
 ```bash
@@ -112,7 +112,7 @@ Các trang chức năng chính:
 
 ---
 
-## 📂 5. Cấu trúc thư mục
+## 5. Cấu trúc thư mục
 
 ```text
 IOT-monitor/
@@ -134,7 +134,7 @@ IOT-monitor/
 
 ---
 
-## 📡 6. Danh sách API chính
+## 6. Danh sách API chính
 
 | Phương thức | Endpoint | Mô tả |
 | :--- | :--- | :--- |
