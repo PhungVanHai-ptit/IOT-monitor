@@ -152,6 +152,7 @@ function renderChart() {
                     pointRadius: 0,
                     pointHoverRadius: 4,
                     tension: 0.4,
+                    spanGaps: true,
                     yAxisID: "y"
                 },
                 {
@@ -163,6 +164,7 @@ function renderChart() {
                     pointRadius: 0,
                     pointHoverRadius: 4,
                     tension: 0.4,
+                    spanGaps: true,
                     yAxisID: "y"
                 },
                 {
@@ -174,6 +176,7 @@ function renderChart() {
                     pointRadius: 0,
                     pointHoverRadius: 4,
                     tension: 0.4,
+                    spanGaps: true,
                     yAxisID: "y1"
                 }
             ]
@@ -337,7 +340,63 @@ function startRealtimeSync() {
                 }
             }
         }
+
+        // 3. Đồng bộ trạng thái thiết bị thời gian thực (check trùng thông minh)
+        await syncDevicesRealtime();
     }, 2000);
+}
+
+// Đồng bộ trạng thái thiết bị thực tế định kỳ (kèm kiểm tra trùng để chống nháy DOM và bảo vệ loading)
+async function syncDevicesRealtime() {
+    // 1. Nếu có thiết bị nào đang trong quá trình gửi lệnh (SENDING / Loading) thì bỏ qua tick này
+    const isAnySending = dashboardDevices.some(function (d) { return d.status === "SENDING"; });
+    if (isAnySending) return;
+
+    try {
+        const res = await fetch("/api/devices");
+        if (!res.ok) return;
+        const newDevices = await res.json();
+        if (!Array.isArray(newDevices)) return;
+
+        let hasChanged = false;
+
+        // 2. So sánh trạng thái từng thiết bị giữa DB và UI hiện tại
+        newDevices.forEach(function (newDev) {
+            const currentDev = dashboardDevices.find(function (d) { return d.id === newDev.id; });
+            if (currentDev) {
+                if (currentDev.status !== newDev.status) {
+                    currentDev.status = newDev.status || "OFF";
+                    hasChanged = true;
+                }
+                if (currentDev.name !== newDev.name) {
+                    currentDev.name = newDev.name;
+                    hasChanged = true;
+                }
+            } else {
+                dashboardDevices.push({
+                    id: newDev.id,
+                    name: newDev.name,
+                    icon: newDev.icon || "light",
+                    status: newDev.status || "OFF"
+                });
+                hasChanged = true;
+            }
+        });
+
+        if (dashboardDevices.length !== newDevices.length) {
+            dashboardDevices = newDevices.map(function (d) {
+                return { id: d.id, name: d.name, icon: d.icon || "light", status: d.status || "OFF" };
+            });
+            hasChanged = true;
+        }
+
+        // 3. CHỈ VẼ LẠI GIAO DIỆN KHI THỰC SỰ CÓ THAY ĐỔI TRẠNG THÁI
+        if (hasChanged) {
+            renderDeviceControl();
+        }
+    } catch (err) {
+        // Bỏ qua lỗi mạng im lặng
+    }
 }
 
 // Bắt đầu đồng bộ dữ liệu thời gian thực khi tải trang xong

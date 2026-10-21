@@ -177,16 +177,9 @@ public class DeviceActionLogService {
     }
 
     private Sort parseSort(String sortStr) {
-        if (sortStr == null) return Sort.by(Sort.Direction.DESC, "timestamp").and(Sort.by(Sort.Direction.DESC, "id"));
-        return switch (sortStr) {
-            case "time-asc" -> Sort.by(Sort.Direction.ASC, "timestamp").and(Sort.by(Sort.Direction.ASC, "id"));
-            case "name-asc" -> Sort.by(Sort.Direction.ASC, "device.name").and(Sort.by(Sort.Direction.DESC, "id"));
-            case "name-desc" -> Sort.by(Sort.Direction.DESC, "device.name").and(Sort.by(Sort.Direction.DESC, "id"));
-            case "action-on" -> Sort.by(Sort.Direction.DESC, "action").and(Sort.by(Sort.Direction.DESC, "id"));
-            case "action-off" -> Sort.by(Sort.Direction.ASC, "action").and(Sort.by(Sort.Direction.DESC, "id"));
-            case "status-success", "status-on" -> Sort.by(Sort.Direction.DESC, "status").and(Sort.by(Sort.Direction.DESC, "id"));
-            case "status-failed", "status-off" -> Sort.by(Sort.Direction.ASC, "status").and(Sort.by(Sort.Direction.DESC, "id"));
-            default -> Sort.by(Sort.Direction.DESC, "timestamp").and(Sort.by(Sort.Direction.DESC, "id"));
-        };
+        if ("time-asc".equalsIgnoreCase(sortStr)) {
+            return Sort.by(Sort.Direction.ASC, "timestamp").and(Sort.by(Sort.Direction.ASC, "id"));
+        }
+        return Sort.by(Sort.Direction.DESC, "timestamp").and(Sort.by(Sort.Direction.DESC, "id"));
     }
 }

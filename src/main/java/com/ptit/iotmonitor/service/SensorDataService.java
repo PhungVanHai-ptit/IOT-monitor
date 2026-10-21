@@ -41,21 +41,15 @@ public class SensorDataService {
         Float light = null;
         LocalDateTime latestTime = null;
 
-        // 1. Cảm biến Ánh sáng (id: 1, type: anh_sang)
-        Sensor lightSensor = findSensorByType("anh_sang", "light");
-        Optional<SensorData> lightOpt = lightSensor != null
-                ? sensorDataRepository.findTopBySensorOrderByTimestampDesc(lightSensor)
-                : sensorDataRepository.findTopBySensor_IdOrderByTimestampDesc(1);
+        // 1. Cảm biến Ánh sáng (Sensor ID: 1)
+        Optional<SensorData> lightOpt = sensorDataRepository.findTopBySensor_IdOrderByTimestampDesc(1);
         if (lightOpt.isPresent()) {
             light = lightOpt.get().getValue();
             latestTime = lightOpt.get().getTimestamp();
         }
 
-        // 2. Cảm biến Nhiệt độ (id: 2, type: nhiet_do)
-        Sensor tempSensor = findSensorByType("nhiet_do", "temperature", "heat");
-        Optional<SensorData> tempOpt = tempSensor != null
-                ? sensorDataRepository.findTopBySensorOrderByTimestampDesc(tempSensor)
-                : sensorDataRepository.findTopBySensor_IdOrderByTimestampDesc(2);
+        // 2. Cảm biến Nhiệt độ (Sensor ID: 2)
+        Optional<SensorData> tempOpt = sensorDataRepository.findTopBySensor_IdOrderByTimestampDesc(2);
         if (tempOpt.isPresent()) {
             temp = tempOpt.get().getValue();
             if (latestTime == null || tempOpt.get().getTimestamp().isAfter(latestTime)) {
@@ -63,11 +57,8 @@ public class SensorDataService {
             }
         }
 
-        // 3. Cảm biến Độ ẩm (id: 3, type: do_am)
-        Sensor humSensor = findSensorByType("do_am", "humidity", "humid");
-        Optional<SensorData> humOpt = humSensor != null
-                ? sensorDataRepository.findTopBySensorOrderByTimestampDesc(humSensor)
-                : sensorDataRepository.findTopBySensor_IdOrderByTimestampDesc(3);
+        // 3. Cảm biến Độ ẩm (Sensor ID: 3)
+        Optional<SensorData> humOpt = sensorDataRepository.findTopBySensor_IdOrderByTimestampDesc(3);
         if (humOpt.isPresent()) {
             hum = humOpt.get().getValue();
             if (latestTime == null || humOpt.get().getTimestamp().isAfter(latestTime)) {
@@ -84,54 +75,45 @@ public class SensorDataService {
     }
 
     public List<com.ptit.iotmonitor.dto.ChartPointDTO> getChartHistory(int limit) {
-        int fetchSize = Math.max(limit * 4, 80);
-        Pageable pageable = PageRequest.of(0, fetchSize);
+        // Quét đúng 60 bản ghi (20 điểm đo x 3 loại cảm biến)
+        Pageable pageable = PageRequest.of(0, limit * 3);
         List<SensorData> list = sensorDataRepository.findLatestRecentData(pageable);
         if (list == null || list.isEmpty()) {
             return Collections.emptyList();
         }
 
-        // Sắp xếp tăng dần theo thời gian (cũ -> mới) để biểu đồ vẽ từ trái sang phải
-        List<SensorData> sortedList = new ArrayList<>(list);
-        sortedList.sort(Comparator.comparing(SensorData::getTimestamp));
+        // list đã được ORDER BY timestamp DESC (mới nhất -> cũ nhất)
+        // Nhờ Time-Window Locking khi nhận MQTT, cả 3 sensor cùng chu kỳ có chung 1 timestamp
+        Map<String, com.ptit.iotmonitor.dto.ChartPointDTO> map = new LinkedHashMap<>();
 
-        List<com.ptit.iotmonitor.dto.ChartPointDTO> points = new ArrayList<>();
-        com.ptit.iotmonitor.dto.ChartPointDTO currentPoint = null;
-        LocalDateTime currentBaseTime = null;
+        for (SensorData sd : list) {
+            String timeKey = sd.getTimestamp().format(TIME_FORMATTER);
+            com.ptit.iotmonitor.dto.ChartPointDTO point = map.computeIfAbsent(timeKey, k ->
+                    com.ptit.iotmonitor.dto.ChartPointDTO.builder().time(k).build()
+            );
 
-        Float lastTemp = null;
-        Float lastHum = null;
-        Float lastLight = null;
-
-        for (SensorData sd : sortedList) {
-            LocalDateTime ts = sd.getTimestamp();
-            if (currentBaseTime == null || java.time.Duration.between(currentBaseTime, ts).abs().getSeconds() > 2) {
-                currentBaseTime = ts;
-                currentPoint = com.ptit.iotmonitor.dto.ChartPointDTO.builder()
-                        .time(currentBaseTime.format(TIME_FORMATTER))
-                        .temperature(lastTemp)
-                        .humidity(lastHum)
-                        .light(lastLight)
-                        .build();
-                points.add(currentPoint);
-            }
-
-            String type = sd.getSensor() != null ? sd.getSensor().getType().toLowerCase() : "";
-            int id = sd.getSensor() != null ? sd.getSensor().getId() : 0;
-
-            if (id == 1 || type.contains("anh_sang") || type.contains("light")) {
-                currentPoint.setLight(sd.getValue());
-                lastLight = sd.getValue();
-            } else if (id == 2 || type.contains("nhiet_do") || type.contains("temp") || type.contains("heat")) {
-                currentPoint.setTemperature(sd.getValue());
-                lastTemp = sd.getValue();
-            } else if (id == 3 || type.contains("do_am") || type.contains("humid")) {
-                currentPoint.setHumidity(sd.getValue());
-                lastHum = sd.getValue();
+            int sensorId = sd.getSensor() != null ? sd.getSensor().getId() : 0;
+            if (sensorId == 1 && point.getLight() == null) {
+                point.setLight(sd.getValue());
+            } else if (sensorId == 2 && point.getTemperature() == null) {
+                point.setTemperature(sd.getValue());
+            } else if (sensorId == 3 && point.getHumidity() == null) {
+                point.setHumidity(sd.getValue());
             }
         }
 
-        // Giữ lại tối đa `limit` điểm đo gần nhất
+        // Đảo ngược lại (cũ -> mới) để biểu đồ vẽ từ trái sang phải
+        List<com.ptit.iotmonitor.dto.ChartPointDTO> points = new ArrayList<>(map.values());
+        Collections.reverse(points);
+
+        // Kế thừa các giá trị gần nhất nếu có gói tin nào bị rớt mạng
+        Float lastLight = null, lastTemp = null, lastHum = null;
+        for (com.ptit.iotmonitor.dto.ChartPointDTO pt : points) {
+            if (pt.getLight() != null) lastLight = pt.getLight(); else pt.setLight(lastLight);
+            if (pt.getTemperature() != null) lastTemp = pt.getTemperature(); else pt.setTemperature(lastTemp);
+            if (pt.getHumidity() != null) lastHum = pt.getHumidity(); else pt.setHumidity(lastHum);
+        }
+
         if (points.size() > limit) {
             points = points.subList(points.size() - limit, points.size());
         }
@@ -139,16 +121,7 @@ public class SensorDataService {
         return points;
     }
 
-    public Sensor findSensorByType(String... types) {
-        for (String t : types) {
-            Optional<Sensor> s = sensorRepository.findByType(t);
-            if (s.isPresent()) return s.get();
-        }
-        return null;
-    }
-
     public PageResponse<SensorDataDTO> getSensorDataPage(int page, int size, String target, String search, String sortStr) {
-        // Pageable (0-indexed)
         int pageIndex = Math.max(0, page - 1);
         Sort sort = parseSort(sortStr);
         Pageable pageable = PageRequest.of(pageIndex, size, sort);
@@ -156,65 +129,50 @@ public class SensorDataService {
         Specification<SensorData> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // Search keyword filter
-            // Dropdown target chỉ đóng vai trò xác định tiêu chí tìm kiếm (tìm giá trị gì), không tự ý lọc khi search rỗng
             if (search != null && !search.trim().isEmpty()) {
                 String keyword = search.trim();
-                String valueKeyword = keyword.replace(",", ".");
                 List<Predicate> searchPredicates = new ArrayList<>();
 
-                // 1. Tiêu chí 'time' -> CHỈ tìm kiếm theo chuỗi thời gian
-                if ("time".equalsIgnoreCase(target)) {
+                // 1. Tiêu chí theo loại cảm biến cụ thể: 1 (Light), 2 (Temperature), 3 (Humidity)
+                int targetSensorId = switch (target.toLowerCase()) {
+                    case "light", "anh_sang" -> 1;
+                    case "temperature", "nhiet_do" -> 2;
+                    case "humidity", "do_am" -> 3;
+                    default -> 0;
+                };
+
+                if (targetSensorId > 0) {
+                    try {
+                        float floatVal = Float.parseFloat(keyword.replace(",", "."));
+                        searchPredicates.add(cb.and(
+                                cb.equal(root.get("sensor").get("id"), targetSensorId),
+                                cb.equal(root.get("value"), floatVal)
+                        ));
+                    } catch (NumberFormatException ignored) {
+                        searchPredicates.add(cb.disjunction());
+                    }
+                } else if ("time".equalsIgnoreCase(target)) {
+                    // 2. Tiêu chí lọc theo thời gian
                     try {
                         searchPredicates.add(cb.like(
                                 cb.function("DATE_FORMAT", String.class, root.get("timestamp"), cb.literal("%Y-%m-%d %H:%i:%s")),
                                 "%" + keyword + "%"
                         ));
-                    } catch (Exception e) {
-                        log.warn("Cannot apply DATE_FORMAT function on timestamp: {}", e.getMessage());
-                    }
-                }
-                // 2. Tiêu chí loại cảm biến cụ thể ('temperature', 'humidity', 'light') -> CHỈ tìm kiếm giá trị trong loại cảm biến đó
-                else if ("temperature".equalsIgnoreCase(target) || "humidity".equalsIgnoreCase(target) || "light".equalsIgnoreCase(target)) {
-                    String targetType = mapTargetToSensorType(target);
-                    Predicate typePredicate = null;
-                    if (targetType != null) {
-                        typePredicate = cb.or(
-                                cb.equal(cb.lower(root.get("sensor").get("type")), targetType.toLowerCase()),
-                                cb.equal(cb.lower(root.get("sensor").get("type")), target.toLowerCase())
-                        );
-                    }
-
+                    } catch (Exception ignored) {}
+                } else {
+                    // 3. Tiêu chí 'all' (Tất cả tiêu chí)
                     try {
-                        float floatVal = Float.parseFloat(valueKeyword);
-                        Predicate valuePredicate = cb.equal(root.get("value"), floatVal);
-                        if (typePredicate != null) {
-                            searchPredicates.add(cb.and(typePredicate, valuePredicate));
-                        } else {
-                            searchPredicates.add(valuePredicate);
-                        }
-                    } catch (NumberFormatException ignored) {
-                        // Nhập chuỗi ngày hoặc chữ không phải số -> trả về rỗng
-                        searchPredicates.add(cb.disjunction());
-                    }
-                }
-                // 3. Tiêu chí 'all' (Tất cả tiêu chí) -> tìm đa năng: theo giá trị, tên cảm biến hoặc thời gian
-                else {
-                    try {
-                        float floatVal = Float.parseFloat(valueKeyword);
+                        float floatVal = Float.parseFloat(keyword.replace(",", "."));
                         searchPredicates.add(cb.equal(root.get("value"), floatVal));
                     } catch (NumberFormatException ignored) {}
 
                     searchPredicates.add(cb.like(cb.lower(root.get("sensor").get("name")), "%" + keyword.toLowerCase() + "%"));
-
                     try {
                         searchPredicates.add(cb.like(
                                 cb.function("DATE_FORMAT", String.class, root.get("timestamp"), cb.literal("%Y-%m-%d %H:%i:%s")),
                                 "%" + keyword + "%"
                         ));
-                    } catch (Exception e) {
-                        log.warn("Cannot apply DATE_FORMAT function on timestamp: {}", e.getMessage());
-                    }
+                    } catch (Exception ignored) {}
                 }
 
                 if (!searchPredicates.isEmpty()) {
@@ -248,7 +206,7 @@ public class SensorDataService {
                 .build();
     }
 
-    public SensorData saveSensorReading(Integer sensorId, Float value) {
+    public SensorData saveSensorReading(Integer sensorId, Float value, LocalDateTime timestamp) {
         Optional<Sensor> sensorOpt = sensorRepository.findById(sensorId);
         if (sensorOpt.isEmpty()) {
             log.warn("Sensor id {} not found when saving reading", sensorId);
@@ -258,28 +216,31 @@ public class SensorDataService {
         SensorData data = SensorData.builder()
                 .sensor(sensorOpt.get())
                 .value(value)
-                .timestamp(LocalDateTime.now())
+                .timestamp(timestamp != null ? timestamp : LocalDateTime.now())
                 .build();
 
         SensorData saved = sensorDataRepository.save(data);
-        log.info("Saved sensor reading: sensorId={}, value={}, id={}", sensorId, value, saved.getId());
+        log.info("Saved sensor reading: sensorId={}, value={}, id={}, time={}", sensorId, value, saved.getId(), data.getTimestamp());
         return saved;
     }
 
+    public SensorData saveSensorReading(Integer sensorId, Float value) {
+        return saveSensorReading(sensorId, value, null);
+    }
+
     public SensorData saveSensorReadingByType(String type, Float value) {
-        Sensor sensor = findSensorByType(type);
-        if (sensor == null) {
-            log.warn("Sensor type {} not found when saving reading", type);
-            return null;
+        if (type == null) return null;
+        int sensorId = switch (type.toLowerCase()) {
+            case "anh_sang", "light" -> 1;
+            case "nhiet_do", "temperature", "heat" -> 2;
+            case "do_am", "humidity", "humid" -> 3;
+            default -> 0;
+        };
+        if (sensorId > 0) {
+            return saveSensorReading(sensorId, value);
         }
-        SensorData data = SensorData.builder()
-                .sensor(sensor)
-                .value(value)
-                .timestamp(LocalDateTime.now())
-                .build();
-        SensorData saved = sensorDataRepository.save(data);
-        log.info("Saved sensor reading by type: type={}, value={}, id={}", type, value, saved.getId());
-        return saved;
+        log.warn("Sensor type {} not recognized when saving reading", type);
+        return null;
     }
 
     private Sort parseSort(String sortStr) {
@@ -289,15 +250,6 @@ public class SensorDataService {
             case "value-desc" -> Sort.by(Sort.Direction.DESC, "value").and(Sort.by(Sort.Direction.DESC, "id"));
             case "value-asc" -> Sort.by(Sort.Direction.ASC, "value").and(Sort.by(Sort.Direction.DESC, "id"));
             default -> Sort.by(Sort.Direction.DESC, "timestamp").and(Sort.by(Sort.Direction.DESC, "id"));
-        };
-    }
-
-    private String mapTargetToSensorType(String target) {
-        return switch (target.toLowerCase()) {
-            case "temperature" -> "nhiet_do";
-            case "humidity" -> "do_am";
-            case "light" -> "anh_sang";
-            default -> target;
         };
     }
 

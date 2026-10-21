@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.concurrent.*;
 
 @Service
@@ -41,6 +42,22 @@ public class MqttService implements MqttCallbackExtended {
     private final ScheduledExecutorService reconnectExecutor = Executors.newSingleThreadScheduledExecutor();
     private final ConcurrentMap<Integer, CompletableFuture<String>> pendingDeviceResponses = new ConcurrentHashMap<>();
     private volatile long lastHardwareMessageTime = 0;
+    private LocalDateTime currentBatchTime = null;
+    private long lastBatchTimestampMillis = 0;
+
+    /**
+     * Khóa thời gian theo đợt đo (Time-Window Locking):
+     * Các gói tin cảm biến đến cách nhau dưới 1000ms (1 giây) sẽ dùng chung 1 timestamp,
+     * tránh bị lệch 1 giây khi gói tin vượt qua ranh giới giữa giây cũ và giây mới.
+     */
+    private synchronized LocalDateTime getBatchTimestamp() {
+        long now = System.currentTimeMillis();
+        if (currentBatchTime == null || (now - lastBatchTimestampMillis) > 1000) {
+            lastBatchTimestampMillis = now;
+            currentBatchTime = LocalDateTime.now().withNano(0);
+        }
+        return currentBatchTime;
+    }
 
     public boolean isMqttConnected() {
         return mqttClient != null && mqttClient.isConnected();
@@ -91,8 +108,7 @@ public class MqttService implements MqttCallbackExtended {
 
             mqttClient.connect(options);
             log.info("MQTT connected successfully to {}", brokerUrl);
-            subscribeTopics();
-
+            // subscribeTopics() được tự động gọi trong callback connectComplete()
         } catch (MqttException e) {
             log.warn("Could not connect to MQTT broker ({}: {}). Will retry in 10 seconds...", brokerUrl, e.getMessage());
             scheduleReconnect();
@@ -187,31 +203,13 @@ public class MqttService implements MqttCallbackExtended {
         lastHardwareMessageTime = System.currentTimeMillis();
 
         try {
-            // 1. Topic sensor: data/sensor/{id} hoặc data/sensor/{type}
+            // 1. Topic sensor: data/sensor/{id} (1: Ánh sáng, 2: Nhiệt độ, 3: Độ ẩm)
             if (topic.startsWith("data/sensor/")) {
-                String key = topic.substring("data/sensor/".length()).trim().toLowerCase();
+                int sensorId = Integer.parseInt(topic.substring("data/sensor/".length()).trim());
                 float value = Float.parseFloat(payload.replace(",", "."));
-
-                // Ánh sáng: topic 1, light, anh_sang (Sensor 1) -> Quy đổi raw ADC sang Lux
-                if ("1".equals(key) || "light".equals(key) || "anh_sang".equals(key)) {
-                    float luxValue = convertRawLightToLux(value);
-                    sensorDataService.saveSensorReadingByType("anh_sang", luxValue);
-                }
-                // Nhiệt độ: topic 2, heat, temperature, nhiet_do (Sensor 2)
-                else if ("2".equals(key) || "heat".equals(key) || "temperature".equals(key) || "nhiet_do".equals(key)) {
-                    sensorDataService.saveSensorReadingByType("nhiet_do", value);
-                }
-                // Độ ẩm: topic 3, humidity, humid, do_am (Sensor 3)
-                else if ("3".equals(key) || "humidity".equals(key) || "humid".equals(key) || "do_am".equals(key)) {
-                    sensorDataService.saveSensorReadingByType("do_am", value);
-                }
-                else {
-                    try {
-                        int sensorId = Integer.parseInt(key);
-                        float finalValue = (sensorId == 1) ? convertRawLightToLux(value) : value;
-                        sensorDataService.saveSensorReading(sensorId, finalValue);
-                    } catch (NumberFormatException ignored) {}
-                }
+                float finalValue = (sensorId == 1) ? convertRawLightToLux(value) : value;
+                LocalDateTime batchTime = getBatchTimestamp();
+                sensorDataService.saveSensorReading(sensorId, finalValue, batchTime);
             }
             // 2. Topic device status: device/{id}/status
             else if (topic.startsWith("device/") && topic.endsWith("/status")) {
@@ -224,8 +222,11 @@ public class MqttService implements MqttCallbackExtended {
                     CompletableFuture<String> pending = pendingDeviceResponses.get(deviceId);
                     if (pending != null && !pending.isDone()) {
                         pending.complete(status);
-                    } else {
+                    } else if (!message.isRetained()) {
+                        // Chỉ ghi log CHECK nếu là trạng thái thực tế do mạch gửi lên, bỏ qua tin retained cũ từ Broker
                         deviceActionLogService.recordAction(deviceId, null, "CHECK", status);
+                    } else {
+                        log.info("Ignored retained MQTT status message on startup: deviceId={}, status={}", deviceId, status);
                     }
                 }
             }
